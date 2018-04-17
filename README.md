@@ -1,6 +1,7 @@
 # Ballerina API Gateway  
+[API Gateway]() a server that act as an API front-end, receives API requests, enforces throttling and security policies, passes requests to the back-end service and then passes the response back to the requester.
 
-In this guide you will learn about building a comprehensive RESTful Web Service using Ballerina. 
+> In this guide you will learn about building a API Gateway for a web service written in Ballerina. 
 
 The following are the sections available in this guide.
 
@@ -11,12 +12,12 @@ The following are the sections available in this guide.
 - [Deployment](#deployment)
 
 ## What you’ll build 
-[API Gateway]() a server that act as an API front-end, receives API requests, enforces throttling and security policies, passes requests to the back-end service and then passes the response back to the requester. 
-To understanding how you can build a RESTful web service using Ballerina, let’s consider a real world use case of an order management scenario of an online retail application with added security. 
+ 
+To understanding how you can build a API gateway for RESTful web service using Ballerina, let’s consider a real world use case of an order management scenario of an online retail application with added security. 
 We can model the order management scenario as a RESTful web service; 'OrderMgtService',  which accepts different HTTP request for order management tasks such as order creation, retrieval, updating and deletion.
 The following figure illustrates all the required functionalities of the OrderMgt RESTful web service that we need to build. 
 
-![api_gateway](images/api_gateway.png "RESTful Service")
+![api_gateway](images/api_gateway.png "API Gateway")
 
 - **Create Order** : To place a new order you can use the HTTP POST message that contains the order details, which is sent to the URL `http://xyz.retail.com/order`.The response from the service contains an HTTP 201 Created message with the location header pointing to the newly created resource `http://xyz.retail.com/order/123456`. 
 - **Retrieve Order** : You can retrieve the order details by sending an HTTP GET request to the appropriate URL which includes the order ID.`http://xyz.retail.com/order/<orderId>` 
