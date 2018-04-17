@@ -19,10 +19,10 @@ The following figure illustrates all the required functionalities of the OrderMg
 
 ![api_gateway](images/api_gateway.png "API Gateway")
 
-- **Create Order** : To place a new order you can use the HTTP POST message that contains the order details, which is sent to the URL `http://xyz.retail.com/order`.The response from the service contains an HTTP 201 Created message with the location header pointing to the newly created resource `http://xyz.retail.com/order/123456`. 
-- **Retrieve Order** : You can retrieve the order details by sending an HTTP GET request to the appropriate URL which includes the order ID.`http://xyz.retail.com/order/<orderId>` 
-- **Update Order** : You can update an existing order by sending a HTTP PUT request with the content for the updated order. 
-- **Delete Order** : An existing order can be deleted by sending a HTTP DELETE request to the specific URL`http://xyz.retail.com/order/<orderId>`. 
+- **Create Order** : To place a new order you can use the HTTP POST message with Auth header that contains the order details, which is sent to the URL `http://xyz.retail.com/order`.The response from the service contains an HTTP 201 Created message with the location header pointing to the newly created resource `http://xyz.retail.com/order/123456`. 
+- **Retrieve Order** : You can retrieve the order details by sending an HTTP GET request with Auth header to the appropriate URL which includes the order ID.`http://xyz.retail.com/order/<orderId>` 
+- **Update Order** : You can update an existing order by sending a HTTP PUT request with Auth header and the content for the updated order. 
+- **Delete Order** : An existing order can be deleted by sending a HTTP DELETE request with Auth header to the specific URL`http://xyz.retail.com/order/<orderId>`. 
 
 ## Prerequisites
  
@@ -36,19 +36,20 @@ The following figure illustrates all the required functionalities of the OrderMg
 
 ## Developing the service 
 
-We can model the OrderMgt RESTful service using Ballerina services and resources constructs. 
+We can add security layer for Ballerina services by adding security parameters to `@ServiceConfig` annotation. 
 
-- We can get started with a Ballerina service; 'OrderMgtService', which is the RESTful service that serves the order management request. OrderMgtService can have multiple resources and each resource is dedicated for a specific order management functionality.
+- We can get started with a Ballerina service; 'OrderMgtService', which is the Auth protected RESTful service that serves the order management request. OrderMgtService can have multiple resources and each resource is dedicated for a specific order management functionality.
 
 - You can decide the package structure for the service and then create the service in the corresponding directory structure. For example, suppose that you are going to use the package name 'api_gateway', then you need to create the following directory structure and create the service file using the text editor or IDE that you use. 
 
 ```
-restful-service
+api-gateway-sample
   └── src
       └── api_gateway
-          ├── order_mgt_service.bal
-          └── test
-              └── order_mgt_service_test.bal          
+      |    ├── order_mgt_service.bal
+      |     └── test
+      |        └── order_mgt_service_test.bal          
+      └── ballerina.conf
 ```
 
 - Once you created your package structure, go to the sample src directory and run the following command to initialize your Ballerina project.
@@ -59,14 +60,26 @@ restful-service
 
   The above command will initialize the project with a `Ballerina.toml` file and `.ballerina` implementation directory that contain a list of packages in the current directory.
 
-- You can add the content to your Ballerina service as shown below. In that code segment you can find the implementation of the service and resource skeletons of 'OrderMgtService'. 
-For each order management operation, there is a dedicated resource and inside each resource we can implement the order management operation logic. 
+- You can add desired usernames and passwords inside the ballerina.conf file. We have added two sample users as follows,
+```ballerina
+["b7a.users"]
 
+["b7a.users.alice"]
+password="abc"
+scopes="scope1"
+
+["b7a.users.bob"]
+password="xyz"
+scopes="scope2"
+```
+ Now let us look into the implementation of the order management with the managed security layer.
+ 
 ##### order_mgt_service.bal
 ```ballerina
 mport ballerina/http;
 import ballerina/auth;
 
+// Define the basic auth as the authentication method 
 http:AuthProvider basicAuthProvider = {id:"basic1", scheme:"basic",
     authProvider:"config"};
 
@@ -82,8 +95,13 @@ endpoint http:SecureListener listener {
 // Order management is done using an in memory map.
 map<json> ordersMap;
 
+// Add the configuration to the service using ServiceConfig annotation
 @http:ServiceConfig {
+    // Base path to the service
     basePath:"/ordermgt",
+    
+    // Add the authConfig parameter to the ServiceConf annotation to protect 
+    // the service with basic auth
     authConfig:{
         authProviders:["basic1"],
         authentication:{enabled:true},
@@ -189,7 +207,7 @@ service<http:Service> order_mgt bind listener {
 
 ```
 
-- With that we've completed the development of OrderMgtService. 
+- With that we've completed the development of OrderMgtService with Auth authentication. 
 
 ## Testing 
 
@@ -219,25 +237,20 @@ ballerina: started HTTP/WS server connector 0.0.0.0:9090
 
 4. You can test the functionality of the OrderMgt RESTFul service by sending HTTP request for each order management operation. For example, we have used the curl commands to test each operation of OrderMgtService as follows. 
 
+NOTE: Use base64 encode to encode the `<username>:<password>` with the username and password pair which is in the `ballerina.conf` file. You can use https://www.base64encode.org/ to base64 encode username and password. We will use `Ym9iOnh5eg==` as the base64 encoded value for `Bob`.
 **Create Order** 
 ```
-curl -v -X POST -d \
+curl -H "Authorization: Basic Ym9iOnh5eg==" -X POST -d \
 '{ "Order": { "ID": "100500", "Name": "XYZ", "Description": "Sample order."}}' \
 "http://localhost:9090/ordermgt/order" -H "Content-Type:application/json"
 
 Output :  
-< HTTP/1.1 201 Created
-< Content-Type: application/json
-< Location: http://localhost:9090/ordermgt/order/100500
-< Transfer-Encoding: chunked
-< Server: wso2-http-transport
-
 {"status":"Order Created.","orderId":"100500"} 
 ```
 
 **Retrieve Order** 
 ```
-curl "http://localhost:9090/ordermgt/order/100500" 
+curl -H "Authorization: Basic Ym9iOnh5eg==" "http://localhost:9090/ordermgt/order/100500" 
 
 Output : 
 {"Order":{"ID":"100500","Name":"XYZ","Description":"Sample order."}}
@@ -245,7 +258,7 @@ Output :
 
 **Update Order** 
 ```
-curl -X PUT -d '{ "Order": {"Name": "XYZ", "Description": "Updated order."}}' \
+curl -H "Authorization: Basic Ym9iOnh5eg==" -X PUT -d '{ "Order": {"Name": "XYZ", "Description": "Updated order."}}' \
 "http://localhost:9090/ordermgt/order/100500" -H "Content-Type:application/json"
 
 Output: 
@@ -254,7 +267,7 @@ Output:
 
 **Cancel Order** 
 ```
-curl -X DELETE "http://localhost:9090/ordermgt/order/100500"
+curl -H "Authorization: Basic Ym9iOnh5eg==" -X DELETE "http://localhost:9090/ordermgt/order/100500"
 
 Output:
 "Order : 100500 removed."
@@ -313,7 +326,7 @@ endpoint http:Listener listener {
 // Add some sample orders to 'orderMap' at startup.
 map<json> ordersMap;
 
-@Description {value:"RESTful service."}
+@Description {value:"API Gateway service."}
 @http:ServiceConfig {basePath:"/ordermgt"}
 service<http:Service> order_mgt bind listener {
 ``` 
