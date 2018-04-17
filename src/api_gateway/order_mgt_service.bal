@@ -1,41 +1,28 @@
-package restful_service;
-
 import ballerina/http;
-import ballerinax/docker;
-import ballerinax/kubernetes;
+import ballerina/auth;
 
-//@docker:Config {
-//    registry:"ballerina.guides.io",
-//    name:"restful_service",
-//    tag:"v1.0"
-//}
+http:AuthProvider basicAuthProvider = {id: "basic1", scheme:"basic", authProvider:"config"};
 
-//@kubernetes:Ingress {
-//    hostname:"ballerina.guides.io",
-//    name:"ballerina-guides-restful-service",
-//    path:"/"
-//}
-//
-//@kubernetes:Service {
-//    serviceType:"NodePort",
-//    name:"ballerina-guides-restful-service"
-//}
-//
-//@kubernetes:Deployment {
-//    image:"ballerina.guides.io/restful_service:v1.0",
-//    name:"ballerina-guides-restful-service"
-//}
-
-endpoint http:Listener listener {
-    port:9090
+// The endpoint used here is 'endpoints:ApiEndpoint', which by default tries to
+// authenticate and authorize each request.
+// The developer has the option to override the authentication and authorization
+// at service and resource level.
+endpoint http:SecureListener listener {
+    port:9090,
+    authProviders:[basicAuthProvider]
 };
 
 // Order management is done using an in memory map.
-// Add some sample orders to 'orderMap' at startup.
 map<json> ordersMap;
 
-@Description {value:"RESTful service."}
-@http:ServiceConfig {basePath:"/ordermgt"}
+@http:ServiceConfig {
+    basePath:"/ordermgt",
+    authConfig:{
+        authProviders:["basic1"],
+        authentication:{enabled:true},
+        scopes:["scope2"]
+    }
+}
 service<http:Service> order_mgt bind listener {
 
     @Description {value:"Resource that handles the HTTP GET requests that are directed
